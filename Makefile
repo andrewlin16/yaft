@@ -1,11 +1,11 @@
 CXX=g++
-CXXFLAGS=-Wall -std=c++11
-LIBS=
+CXXFLAGS=-Wall -std=c++11 `libpng-config --cflags`
+LDFLAGS=-lgmpxx -lgmp `libpng-config --ldflags`
 
 default: yaft
 
 yaft: main.cpp
-	$(CXX) $(CXXFLAGS) $(LIBS) main.cpp -o yaft
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) main.cpp -o yaft
 
 clean:
 	rm -f yaft
