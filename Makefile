@@ -1,5 +1,5 @@
 CXX=g++
-CXXFLAGS=-Wall -std=c++11 `libpng-config --cflags`
+CXXFLAGS=-Wall -std=c++11 `libpng-config --cflags` -O3
 LDFLAGS=-lgmpxx -lgmp `libpng-config --ldflags`
 
 default: yaft
