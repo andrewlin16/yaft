@@ -2,6 +2,7 @@
 #include <cstdlib>
 #include <iostream>
 #include <sstream>
+#include <thread>
 
 #include <gmpxx.h>
 #include <png++/png.hpp>
@@ -18,6 +19,8 @@ mpf_class yinc;
 
 png::image<png::index_pixel> image;
 
+int thread_limit;
+
 void render_pixel(size_t y, size_t x) {
 	mpf_class posx = xmin + x * xinc;
 	mpf_class posy = ymax - y * yinc;
@@ -32,6 +35,18 @@ void render_pixel(size_t y, size_t x) {
 	}
 
 	image[y][x] = iter;
+}
+
+void render_thread(int id) {
+	size_t area = image.get_height() * image.get_width();
+	size_t pix = area * id / thread_limit;
+	size_t pix_limit = area * (id + 1) / thread_limit;
+
+	for (size_t i = pix; i < pix_limit; i++) {
+		size_t y = i / image.get_height();
+		size_t x = i % image.get_width();
+		render_pixel(y, x);
+	}
 }
 
 int main(int argc, char *argv[]) {
@@ -72,6 +87,17 @@ int main(int argc, char *argv[]) {
 	// render image
 	xinc = (xmax - xmin) / dim[0];
 	yinc = (ymax - ymin) / dim[1];
+
+	thread_limit = std::thread::hardware_concurrency();
+	std::thread *thread_pool = new std::thread[thread_limit];
+
+	for (int i = 0; i < thread_limit; i++) {
+		thread_pool[i] = std::thread(render_thread, i);
+	}
+
+	for (int i = 0; i < thread_limit; i++) {
+		thread_pool[i].join();
+	}
 
 	for (size_t y = 0; y < image.get_height(); ++y) {
 		for (size_t x = 0; x < image.get_width(); ++x) {
