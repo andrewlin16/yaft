@@ -119,12 +119,6 @@ int main(int argc, char *argv[]) {
 		thread_pool[i].join();
 	}
 
-	for (size_t y = 0; y < image.get_height(); ++y) {
-		for (size_t x = 0; x < image.get_width(); ++x) {
-			render_pixel(y, x);
-		}
-	}
-
 	// write out image
 	image.write(arg_output);
 	return 0;
