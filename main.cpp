@@ -21,9 +21,7 @@ png::image<png::index_pixel> image;
 
 int thread_limit;
 
-void render_pixel(size_t y, size_t x) {
-	mpf_class posx = xmin + x * xinc;
-	mpf_class posy = ymax - y * yinc;
+png::index_pixel render_pixel(const mpf_class &posy, const mpf_class &posx) {
 	std::complex<mpf_class> v0(posx, posy);
 	std::complex<mpf_class> v(0, 0);
 
@@ -34,18 +32,36 @@ void render_pixel(size_t y, size_t x) {
 		iter++;
 	}
 
-	image[y][x] = iter;
+	return iter;
 }
 
 void render_thread(int id) {
-	size_t area = image.get_height() * image.get_width();
+	size_t height = image.get_height();
+	size_t width = image.get_width();
+
+	size_t area = width * height;
 	size_t pix = area * id / thread_limit;
 	size_t pix_limit = area * (id + 1) / thread_limit;
 
+	size_t y = pix / width;
+	size_t x = pix % width;
+
+	mpf_class pos_y = ymin + y * yinc;
+	mpf_class pos_x = xmin + x * xinc;
+
 	for (size_t i = pix; i < pix_limit; i++) {
-		size_t y = i / image.get_height();
-		size_t x = i % image.get_width();
-		render_pixel(y, x);
+		image[y][x] = render_pixel(pos_y, pos_x);
+
+		x++;
+		if (x == width) {
+			x = 0;
+			y++;
+
+			pos_x = xmin;
+			pos_y += yinc;
+		} else {
+			pos_x += xinc;
+		}
 	}
 }
 
