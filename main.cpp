@@ -36,6 +36,8 @@ png::index_pixel render_pixel(const mpf_class &posy, const mpf_class &posx) {
 }
 
 void render_thread(int id) {
+	std::cerr << ("thread " + std::to_string(id) + " go\n");
+
 	size_t height = image.get_height();
 	size_t width = image.get_width();
 
@@ -63,6 +65,8 @@ void render_thread(int id) {
 			pos_x += xinc;
 		}
 	}
+
+	std::cerr << ("thread " + std::to_string(id) + " done\n");
 }
 
 int main(int argc, char *argv[]) {
