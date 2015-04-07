@@ -1,6 +1,7 @@
 #include <complex>
 #include <cstdlib>
 #include <iostream>
+#include <mutex>
 #include <sstream>
 #include <thread>
 
@@ -9,6 +10,8 @@
 
 #define ESCAPE 4
 #define MAX_ITERATIONS 255
+
+#define CHUNK_SIZE 2048
 
 mpf_class xmin;
 mpf_class xmax;
@@ -20,6 +23,9 @@ mpf_class yinc;
 png::image<png::index_pixel> image;
 
 int thread_limit;
+
+std::mutex chunk_lock;
+size_t chunk_id;
 
 png::index_pixel render_pixel(const mpf_class &posy, const mpf_class &posx) {
 	std::complex<mpf_class> v0(posx, posy);
@@ -42,27 +48,42 @@ void render_thread(int id) {
 	size_t width = image.get_width();
 
 	size_t area = width * height;
-	size_t pix = area * id / thread_limit;
-	size_t pix_limit = area * (id + 1) / thread_limit;
+	mpf_class pos_y;
+	mpf_class pos_x;
 
-	size_t y = pix / width;
-	size_t x = pix % width;
+	while (true) {
+		size_t pix;
 
-	mpf_class pos_y = ymin + y * yinc;
-	mpf_class pos_x = xmin + x * xinc;
+		chunk_lock.lock();
 
-	for (size_t i = pix; i < pix_limit; i++) {
-		image[y][x] = render_pixel(pos_y, pos_x);
-
-		x++;
-		if (x == width) {
-			x = 0;
-			y++;
-
-			pos_x = xmin;
-			pos_y += yinc;
+		if (chunk_id * CHUNK_SIZE >= area) {
+			chunk_lock.unlock();
+			break;
 		} else {
-			pos_x += xinc;
+			pix = chunk_id * CHUNK_SIZE;
+			chunk_id++;
+			chunk_lock.unlock();
+		}
+
+		size_t y = pix / width;
+		size_t x = pix % width;
+
+		pos_y = ymin + y * yinc;
+		pos_x = xmin + x * xinc;
+
+		for (size_t i = 0; i < CHUNK_SIZE; i++) {
+			image[y][x] = render_pixel(pos_y, pos_x);
+
+			x++;
+			if (x == width) {
+				x = 0;
+				y++;
+
+				pos_x = xmin;
+				pos_y += yinc;
+			} else {
+				pos_x += xinc;
+			}
 		}
 	}
 
@@ -107,6 +128,8 @@ int main(int argc, char *argv[]) {
 	// render image
 	xinc = (xmax - xmin) / dim[0];
 	yinc = (ymax - ymin) / dim[1];
+
+	chunk_id = 0;
 
 	thread_limit = std::thread::hardware_concurrency();
 	std::thread *thread_pool = new std::thread[thread_limit];
